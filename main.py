@@ -28,20 +28,39 @@ def escape(text: str):
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await context.bot.send_message(chat_id=update.effective_chat.id, text="I'm a bot, please talk to me!")
+    logger.debug(f'/start called')
+    await context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text="我是自动图床上传机器人，可以将指定群的图片自动上传到流浪图床。"
+    )
 
 
 async def ping(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    logger.debug(f'/ping called')
     await context.bot.send_message(chat_id=update.effective_chat.id, text="pong!")
 
 
 async def help(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await context.bot.send_message(chat_id=update.effective_chat.id, text="There is no help.")
+    logger.debug(f'/help called')
+    await context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        parse_mode='MarkdownV2',
+        disable_web_page_preview=True,
+        text="*删除链接拼接方式*\n" + 
+             escape("如果图床地址是\nhttps://p.sda1.dev/{路径}/{文件名}\n") +
+             escape("那么删除链接是\nhttps://p.sda1.dev/api/v1/delete/{路径}/{删除令牌}\n") +
+             "\n*删除令牌在哪*\n" +
+             escape("'|' 前面是图床地址，后面就是删除令牌\n") +
+             "\n*为什么用删除令牌，不直接给删除链接*\n" +
+             "因为 Telegram 会自动访问每个链接来显示预览，删除链接一访问就把图删除了\n"
+    )
 
 
 async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    logger.debug(f'/photo called')
     img = await context.bot.getFile(update.message.photo[-1].file_id)
     filepath = await img.download_to_drive()
+    logger.info(f'/photo, image downloaded')
     try:
         data = await upload_images(filepath)
     except:
@@ -52,7 +71,7 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
             delete_token = data['delete_url'].split('/')[-1]
             await context.bot.send_message(
                 chat_id=update.effective_chat.id,
-                text=f"[url]({url}), delete: `{delete_token}`",
+                text=f"[图床链接]({url}) \| `{delete_token}`",
                 parse_mode='MarkdownV2',
                 disable_web_page_preview=True)
         except Exception as e:
@@ -63,14 +82,7 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except:
             logger.error(f'/photo, send message failed, e: {e}')
     os.remove(filepath)
-
-
-async def document(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await context.bot.send_message(chat_id=update.effective_chat.id, text="Get document!")
-
-
-async def delete(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await context.bot.send_message(chat_id=update.effective_chat.id, text="Get delete!")
+    logger.info(f'/photo, image removed')
 
 
 if __name__ == '__main__':
@@ -92,11 +104,5 @@ if __name__ == '__main__':
 
     photo_handler = MessageHandler(filters.PHOTO & (~filters.COMMAND) & filters.Chat(configs.chat_id), photo)
     application.add_handler(photo_handler)
-
-    document_handler = MessageHandler(filters.ATTACHMENT & (~filters.COMMAND), document)
-    application.add_handler(document_handler)
-
-    delete_handler = CommandHandler('delete', delete)
-    application.add_handler(delete_handler)
     
     application.run_polling()
