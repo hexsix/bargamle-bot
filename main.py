@@ -67,7 +67,7 @@ async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         data = {}
     if data:
         try:
-            url = data['url'].replace('p.sda1.dev', 'psda1dev.hexsix.me')
+            url = data['url']
             delete_token = data['delete_url'].split('/')[-1]
             await context.bot.send_message(
                 chat_id=update.effective_chat.id,
